@@ -23,7 +23,10 @@ fn main() {
     println!("cargo:rerun-if-changed=c-ares");
 
     // Use the installed libcares if it is available.
-    if metadeps::probe().is_ok() {
+    if let Ok(libs) = metadeps::probe() {
+        println!("cargo:INCLUDE={}", libs["libcares"].include_paths[0].display());
+        println!("cargo:LIB={}", libs["libcares"].link_paths[0].display());
+
         return;
     }
 
@@ -32,6 +35,9 @@ fn main() {
     let build = outdir.join("build");
     let _ = fs::remove_dir_all(&build);
     fs::create_dir(&build).unwrap();
+
+    println!("cargo:INCLUDE={}", build.join("include").display());
+    println!("cargo:LIB={}", build.join("lib").display());
 
     // Copy the c-ares source code into $OUT_DIR, where it's safe for the build
     // process to modify it.
@@ -137,7 +143,7 @@ fn build_msvc(target: &str) {
     // Compile.
     let mut cmd = nmake(target);
     cmd.current_dir(&c_ares_dir);
-    cmd.args(&["/f", "Makefile.msvc", "CFG=lib-release", "c-ares"]);
+    cmd.args(&["/f", "Makefile.msvc", "CFG=lib-release", "RTLIBCFG=static", "c-ares"]);
     run(&mut cmd);
 
     // Install library.
